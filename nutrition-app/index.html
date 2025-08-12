@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Nutrition">
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- iOS Splash Screens -->
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-startup-image" href="splash.png">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <title>Nutrition Calculator</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+        
+        .app-container {
+            height: 100vh;
+            height: -webkit-fill-available;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: env(safe-area-inset-top) 15px 15px;
+            padding-top: calc(env(safe-area-inset-top) + 15px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .tab-bar {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 99;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border: none;
+            background: none;
+            position: relative;
+            transition: color 0.3s;
+        }
+        
+        .tab.active {
+            color: #667eea;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #667eea;
+        }
+        
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .tab-panel {
+            display: none;
+            padding: 15px;
+            animation: fadeIn 0.3s;
+        }
+        
+        .tab-panel.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .search-bar {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 10px 0;
+            margin-bottom: 10px;
+            z-index: 10;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            background: #f8f9fa;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+        }
+        
+        .filter-chips {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 10px 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .chip {
+            padding: 8px 16px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            border: none;
+            color: #333;
+            transition: all 0.3s;
+        }
+        
+        .chip.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .food-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .food-item.selected {
+            background: #f0f8ff;
+            border-color: #667eea;
+        }
+        
+        .food-item.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .food-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .food-brand {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .nutrition-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .nutrition-badge {
+            font-size: 11px;
+            padding: 4px 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            color: #555;
+        }
+        
+        .selected-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .selected-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+        
+        .selected-item-info {
+            flex: 1;
+        }
+        
+        .remove-btn {
+            padding: 6px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 20px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            justify-content: center;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 10px;
+        }
+        
+        .quantity-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+        }
+        
+        .quantity-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .quantity-display {
+            font-size: 18px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .nutrition-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .nutrition-summary h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .nutrition-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .nutrition-stat {
+            background: rgba(255,255,255,0.15);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .nutrition-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .nutrition-label {
+            font-size: 11px;
+            opacity: 0.9;
+            text-transform: uppercase;
+        }
+        
+        .clear-all-btn {
+            width: 100%;
+            padding: 15px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .bottom-safe-area {
+            height: env(safe-area-inset-bottom);
+            background: white;
+        }
+        
+        .floating-badge {
+            position: fixed;
+            bottom: calc(20px + env(safe-area-inset-bottom));
+            right: 20px;
+            background: #ff4444;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .floating-badge.show {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>🥗 Nutrition Calculator</h1>
+        </div>
+        
+        <div class="tab-bar">
+            <button class="tab active" onclick="switchTab('browse')">Browse Foods</button>
+            <button class="tab" onclick="switchTab('selected')">Selected (<span id="selectedCount">0</span>)</button>
+        </div>
+        
+        <div class="tab-content">
+            <div id="browse-panel" class="tab-panel active">
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="Search foods..." id="searchInput">
+                </div>
+                
+                <div class="filter-chips">
+                    <button class="chip active" onclick="filterCategory('')">All</button>
+                    <button class="chip" onclick="filterCategory('Fast Food')">Fast Food</button>
+                    <button class="chip" onclick="filterCategory('Frozen Meal')">Frozen Meals</button>
+                </div>
+                
+                <div id="foodList"></div>
+            </div>
+            
+            <div id="selected-panel" class="tab-panel">
+                <div id="selectedItems"></div>
+                
+                <div class="nutrition-summary">
+                    <h3>Total Nutrition</h3>
+                    <div class="nutrition-grid">
+                        <div class="nutrition-stat">
+                            <div class="nutrition-value" id="totalCalories">0</div>
+                            <div class="nutrition-label">Calories</div>
+                        </div>
+                        <div class="nutrition-stat">
+                            <div class="nutrition-value" id="totalSodium">0</div>
+                            <div class="nutrition-label">Sodium (mg)</div>
+                        </div>
+                        <div class="nutrition-stat">
+                            <div class="nutrition-value" id="totalProtein">0</div>
+                            <div class="nutrition-label">Protein (g)</div>
+                        </div>
+                        <div class="nutrition-stat">
+                            <div class="nutrition-value" id="totalFat">0</div>
+                            <div class="nutrition-label">Fat (g)</div>
+                        </div>
+                        <div class="nutrition-stat">
+                            <div class="nutrition-value" id="totalCarbs">0</div>
+                            <div class="nutrition-label">Carbs (g)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="clear-all-btn" onclick="clearAllItems()">Clear All Items</button>
+                <div class="bottom-safe-area"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="floating-badge" id="floatingBadge">0</div>
+
+    <script>
+        let foodData = [];
+        let selectedItems = new Map();
+        let currentCategory = '';
+        
+        const csvData = `Category,Restaurant/Brand,Menu Item/Product,Sodium (mg),Calories,Protein (g),Fat (g),Carbs (g),Available At
+Fast Food,Burger King,Chicken Fries (4 piece),378,124,6,8,9,
+Fast Food,Burger King,French Toast Sticks (3 piece),260,230,3,11,29,
+Fast Food,Burger King,Garden Grilled Chicken Salad (no dressing),500,320,35,13,18,
+Fast Food,Burger King,Medium French Fries,270,370,4,16,48,
+Fast Food,Burger King,Small French Fries,220,300,3,13,43,
+Fast Food,Burger King,Sweet & Sour Dipping Sauce,50,50,0,0,12,
+Fast Food,Burger King,Whopper Jr.,536,325,16,12,34,
+Fast Food,Chick-fil-A,Berry Parfait with Granola,85,270,13,9,35,
+Fast Food,Chick-fil-A,Grilled Nuggets (8 count),440,130,25,3,1,
+Fast Food,Chipotle,Chicken,310,180,32,7,0,
+Fast Food,Chipotle,Cilantro-Lime Brown Rice,190,210,4,6,36,
+Fast Food,Chipotle,Crispy Corn Tortilla (1),0,70,1,3,10,
+Fast Food,Chipotle,Fajita Vegetables,150,20,1,0,5,
+Fast Food,Chipotle,Guacamole,370,230,2,22,8,
+Fast Food,Chipotle,Steak,330,150,21,6,1,
+Fast Food,Dunkin',Egg & Cheese Wake-Up Wrap,450,180,7,11,13,
+Fast Food,Dunkin',Original Oatmeal,200,270,8,4,49,
+Fast Food,Five Guys,Little Hamburger (protein style no bun),400,220,17,17,0,
+Fast Food,KFC,Kentucky Fried Nuggets (5 piece),700,175,17,8,8,
+Fast Food,McDonald's,Apple Slices,0,15,0,0,4,
+Fast Food,McDonald's,Chicken McNuggets (4 piece),360,190,9,12,12,
+Fast Food,McDonald's,Chicken McNuggets (6 piece),540,280,13,18,18,
+Fast Food,McDonald's,Fruit & Maple Oatmeal,160,290,5,4,58,
+Fast Food,McDonald's,Hamburger,490,250,12,8,32,
+Fast Food,McDonald's,Hash Brown,310,150,1,9,15,
+Fast Food,McDonald's,Honey Packet,0,50,0,0,12,
+Fast Food,McDonald's,Medium Fries,260,320,4,15,42,
+Fast Food,McDonald's,Small Fries,130,230,2,11,30,
+Fast Food,McDonald's,Strawberry Banana Smoothie (Small),40,210,3,0.5,50,
+Fast Food,Panera,Balsamic Greens with Grains (No Dressing),415,330,6,17,23,
+Fast Food,Panera,Balsamic Vinegar Dressing (Portion),290,100,0,8,1,
+Fast Food,Panera,Balsamic Vinegar Dressing (Whole),170,160,0,13,2,
+Fast Food,Panera,Greek Dressing Portion,50,40,0,4,0,
+Fast Food,Panera,Steel Cut Oatmeal (Strawberries & Pecans),170,370,8,14,52,
+Fast Food,Sonic,Apple Slices Kids,0,35,0,0,9,
+Fast Food,Sonic,Kids Crispy Tenders (2 piece),490,180,15,8,8,
+Fast Food,Starbucks,Berry Trio Parfait,125,240,14,3,39,
+Fast Food,Starbucks,Butter Croissant,300,250,5,14,26,
+Fast Food,Starbucks,Petite Vanilla Bean Scone,95,120,2,4.5,18,
+Fast Food,Starbucks,Rolled & Steel Cut Oatmeal,125,160,5,2.5,28,
+Fast Food,Starbucks,Tomato & Mozzarella on Focaccia,590,360,15,12,45,
+Fast Food,Starbucks,Turkey Bacon Cheddar & Egg White Sandwich,550,230,17,5,28,
+Fast Food,Subway,6" Grilled Chicken,580,290,27,4,40,
+Fast Food,Subway,6" Veggie Delite,370,210,10,3,39,
+Fast Food,Subway,Grilled Chicken No Bready Bowl,480,200,27,4,12,
+Fast Food,Subway,Grilled Chicken Salad,280,130,19,3,10,
+Fast Food,Subway,Rotisserie Style Chicken Salad,470,150,23,5,11,
+Fast Food,Subway,Veggie Delite Salad,75,50,3,1,9,
+Fast Food,Taco Bell,Black Beans & Rice,400,160,4,3.5,28,
+Fast Food,Tim Hortons,Greek Yogurt Parfait with Berries,90,270,15,5,40,
+Fast Food,Wendy's,Apple Pecan Salad (no cheese/dressing),400,300,23,12,27,
+Fast Food,Wendy's,Chicken Nuggets (4 piece),380,180,10,12,10,
+Fast Food,Wendy's,French Toast Sticks (6 piece),570,490,16,25,50,
+Fast Food,Wendy's,Jr. Hamburger,440,250,13,11,25,
+Fast Food,Wendy's,Plain Baked Potato,40,270,7,0,61,
+Fast Food,Wendy's,Small Fries,420,260,4,12,35,
+Fast Food,Wendy's,Sour Cream and Chive Baked Potato,55,310,7,3,63,
+Frozen Meal,Aldi Whole & Simple,Mediterranean Chicken Quinoa Bowl,600,340,16,10,42,Aldi
+Frozen Meal,Aldi Whole & Simple,Southwestern Chicken Quinoa Bowl,530,330,17,9,41,Aldi
+Frozen Meal,Amy's Light in Sodium,Black Bean Enchilada,290,320,9,8,53,"ShopRite, Walmart, Target, Hannaford"
+Frozen Meal,Amy's Light in Sodium,Brown Rice & Vegetables Bowl,340,290,9,9,45,"ShopRite, Walmart, Target, Hannaford"
+Frozen Meal,Amy's Light in Sodium,Lentil Soup,460,160,8,3,25,"ShopRite, Walmart, Target, Hannaford"
+Frozen Meal,Amy's Light in Sodium,Mexican Casserole Bowl,370,370,16,7,42,"ShopRite, Walmart, Target, Hannaford"
+Frozen Meal,Amy's Light in Sodium,Spicy Chili,320,310,16,9,40,"ShopRite, Walmart, Target, Hannaford"
+Frozen Meal,Birds Eye,California Style Protein Blend,380,140,10,2.5,19,"ShopRite, Walmart, Target"
+Frozen Meal,Birds Eye,Southwest Style Protein Blend,350,290,18,12,28,"ShopRite, Walmart, Target"
+Frozen Meal,Birds Eye,Steamfresh Lightly Sauced Pasta & Veggies,470,260,7,6,44,"ShopRite, Walmart, Target"
+Frozen Meal,Blake's,Chicken Pot Pie,650,380,15,18,38,"Walmart, Target"
+Frozen Meal,Evol,Chicken Tikka Masala,580,430,19,13,56,"Target, Walmart"
+Frozen Meal,Evol,Fire Grilled Steak Bowl,510,410,18,20,40,"Target, Walmart"
+Frozen Meal,Healthy Choice,Basil Pesto Chicken Power Bowl,580,230,20,6,26,"ShopRite, Walmart, Target, Hannaford"
+Frozen Meal,Healthy Choice,Chicken & Vegetable Stir Fry,550,190,14,3.5,26,"ShopRite, Walmart, Target, Hannaford"
+Frozen Meal,Healthy Choice,Grilled Chicken Marsala,460,250,22,4,31,"ShopRite, Walmart, Target, Hannaford"
+Frozen Meal,Healthy Choice,Simply Steamers Beef & Broccoli,600,280,19,9,32,"ShopRite, Walmart, Target, Hannaford"
+Frozen Meal,Healthy Choice,Spicy Black Bean & Chicken Power Bowl,560,210,20,4,30,"ShopRite, Walmart, Target, Hannaford"
+Frozen Meal,Lean Cuisine,Apple Cranberry Chicken (AHA Certified),510,300,14,4,53,"ShopRite, Walmart, Target"
+Frozen Meal,Lean Cuisine,Chicken Teriyaki,650,290,18,3,47,"ShopRite, Walmart, Target"
+Frozen Meal,Lean Cuisine,Herb Roasted Chicken,590,240,19,6,28,"ShopRite, Walmart, Target"
+Frozen Meal,Lean Cuisine,Lemon Garlic Shrimp Stir-Fry,560,210,13,2.5,34,"ShopRite, Walmart, Target"
+Frozen Meal,Lean Cuisine,Marketplace Vermont White Cheddar Mac,620,270,14,6,39,"ShopRite, Walmart, Target"
+Frozen Meal,Life Cuisine,Cauliflower Crust Pizza,590,340,17,16,31,"Walmart, Target"
+Frozen Meal,Saffron Road,Chicken Tikka Masala,550,380,17,10,52,"Whole Foods, Target"
+Frozen Meal,Saffron Road,Lemongrass Basil Chicken,490,370,18,12,46,"Whole Foods, Target"
+Frozen Meal,Target Good & Gather,Chicken Pad Thai,660,410,18,11,56,Target
+Frozen Meal,Trader Joe's,Cauliflower Gnocchi,460,140,2,3,30,Trader Joe's
+Frozen Meal,Trader Joe's,Chicken Burrito Bowl,640,380,19,12,49,Trader Joe's
+Frozen Meal,Trader Joe's,Cuban Style Citrus Bowl,540,400,16,18,44,Trader Joe's
+Frozen Meal,Trader Joe's,Premium Salmon Burgers,300,110,15,4,0,Trader Joe's
+Frozen Meal,Trader Joe's,Reduced Guilt Mac & Cheese,580,270,13,4,45,Trader Joe's
+Frozen Meal,Walmart Great Value,Chicken Alfredo,680,350,19,12,39,Walmart
+Frozen Meal,Whole Foods 365,Chicken Florentine,580,340,22,8,43,Whole Foods
+Frozen Meal,Whole Foods 365,Thai Red Curry Chicken,620,390,16,14,48,Whole Foods`;
+
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            const headers = lines[0].split(',');
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const item = {
+                    id: i,
+                    category: values[0],
+                    brand: values[1],
+                    name: values[2],
+                    sodium: parseFloat(values[3]) || 0,
+                    calories: parseFloat(values[4]) || 0,
+                    protein: parseFloat(values[5]) || 0,
+                    fat: parseFloat(values[6]) || 0,
+                    carbs: parseFloat(values[7]) || 0,
+                    availableAt: values[8] || ''
+                };
+                data.push(item);
+            }
+            
+            return data;
+        }
+        
+        function loadFoodData() {
+            foodData = parseCSV(csvData);
+            renderFoodList();
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            
+            if (tab === 'browse') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('browse-panel').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('selected-panel').classList.add('active');
+            }
+        }
+        
+        function filterCategory(category) {
+            currentCategory = category;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            renderFoodList();
+        }
+        
+        function renderFoodList() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filteredData = foodData;
+            
+            if (searchTerm) {
+                filteredData = filteredData.filter(item => 
+                    item.name.toLowerCase().includes(searchTerm) ||
+                    item.brand.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (currentCategory) {
+                filteredData = filteredData.filter(item => item.category === currentCategory);
+            }
+            
+            const foodListDiv = document.getElementById('foodList');
+            
+            if (filteredData.length === 0) {
+                foodListDiv.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div>No items found</div>';
+                return;
+            }
+            
+            foodListDiv.innerHTML = filteredData.map(item => `
+                <div class="food-item ${selectedItems.has(item.id) ? 'selected' : ''}" onclick="toggleFoodItem(${item.id})">
+                    <div class="food-name">${item.name}</div>
+                    <div class="food-brand">${item.brand}</div>
+                    <div class="nutrition-badges">
+                        <span class="nutrition-badge">🔥 ${item.calories} cal</span>
+                        <span class="nutrition-badge">🧂 ${item.sodium}mg</span>
+                        <span class="nutrition-badge">💪 ${item.protein}g</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function toggleFoodItem(id) {
+            const item = foodData.find(f => f.id === id);
+            if (!item) return;
+            
+            if (selectedItems.has(id)) {
+                selectedItems.delete(id);
+            } else {
+                selectedItems.set(id, { ...item, quantity: 1 });
+            }
+            
+            updateSelectedCount();
+            renderFoodList();
+            renderSelectedItems();
+            updateNutritionSummary();
+        }
+        
+        function updateSelectedCount() {
+            const count = selectedItems.size;
+            document.getElementById('selectedCount').textContent = count;
+            
+            const badge = document.getElementById('floatingBadge');
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.add('show');
+            } else {
+                badge.classList.remove('show');
+            }
+        }
+        
+        function renderSelectedItems() {
+            const selectedDiv = document.getElementById('selectedItems');
+            
+            if (selectedItems.size === 0) {
+                selectedDiv.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🍽️</div>No items selected</div>';
+                return;
+            }
+            
+            selectedDiv.innerHTML = Array.from(selectedItems.values()).map(item => `
+                <div class="selected-item">
+                    <div class="selected-item-header">
+                        <div class="selected-item-info">
+                            <div class="food-name">${item.name}</div>
+                            <div class="food-brand">${item.brand}</div>
+                            <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                                ${item.calories} cal • ${item.sodium}mg sodium
+                            </div>
+                        </div>
+                        <button class="remove-btn" onclick="removeItem(${item.id})">×</button>
+                    </div>
+                    <div class="quantity-control">
+                        <button class="quantity-btn" onclick="changeQuantity(${item.id}, -1)">−</button>
+                        <span class="quantity-display">${item.quantity}</span>
+                        <button class="quantity-btn" onclick="changeQuantity(${item.id}, 1)">+</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function changeQuantity(id, delta) {
+            const item = selectedItems.get(id);
+            if (!item) return;
+            
+            item.quantity = Math.max(1, item.quantity + delta);
+            selectedItems.set(id, item);
+            
+            renderSelectedItems();
+            updateNutritionSummary();
+        }
+        
+        function removeItem(id) {
+            selectedItems.delete(id);
+            updateSelectedCount();
+            renderFoodList();
+            renderSelectedItems();
+            updateNutritionSummary();
+        }
+        
+        function updateNutritionSummary() {
+            let totals = {
+                calories: 0,
+                sodium: 0,
+                protein: 0,
+                fat: 0,
+                carbs: 0
+            };
+            
+            selectedItems.forEach(item => {
+                totals.calories += item.calories * item.quantity;
+                totals.sodium += item.sodium * item.quantity;
+                totals.protein += item.protein * item.quantity;
+                totals.fat += item.fat * item.quantity;
+                totals.carbs += item.carbs * item.quantity;
+            });
+            
+            document.getElementById('totalCalories').textContent = Math.round(totals.calories);
+            document.getElementById('totalSodium').textContent = Math.round(totals.sodium);
+            document.getElementById('totalProtein').textContent = totals.protein.toFixed(1);
+            document.getElementById('totalFat').textContent = totals.fat.toFixed(1);
+            document.getElementById('totalCarbs').textContent = totals.carbs.toFixed(1);
+        }
+        
+        function clearAllItems() {
+            if (confirm('Clear all selected items?')) {
+                selectedItems.clear();
+                updateSelectedCount();
+                renderFoodList();
+                renderSelectedItems();
+                updateNutritionSummary();
+            }
+        }
+        
+        document.getElementById('searchInput').addEventListener('input', renderFoodList);
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+        
+        window.addEventListener('load', loadFoodData);
+    </script>
+</body>
+</html>
